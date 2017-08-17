@@ -1,110 +1,98 @@
 const express = require('express');
 
-const OrderModel = require('../models/order');
-const TypeModel = require('../models/type');
-const ProviderModel = require('../models/provider');
+const orderProvider = [
+    {
+        id: 1,
+        name: 'Chocolate'
+    },
+    {
+        id: 2,
+        name: 'Some Provider'
+    },
+    {
+        id: 2,
+        name: 'Hollywood undead'
+    }
+];
 
-const expressJwt = require('express-jwt');
-const CONSTANTS = require('../constants');
-const SECRET = CONSTANTS.SECRET;
-const authenticate = expressJwt({ secret: SECRET });
+const orderType = [
+    {
+        id: 1,
+        name: 'Wholesale'
+    },
+    {
+        id: 2,
+        name: 'Retail'
+    }
+];
+
+let orderData = [
+    {
+        id:	1,
+        customerFistName:	'Some',
+        customerSecondName:	'Name',
+        customerEmail:	'serzmerz@gmail.com',
+        customerPhone:	'+380508745114',
+        orderTranscription:	'First Order',
+        orderType:	'Wholesale',
+        orderProvider:	'Chocolate',
+        orderDatePerformance:	1503435600000,
+        orderDate:	1503003028244,
+        orderStatus:	'Confirm',
+        orderNumber:	'w-1708171'
+    }
+];
 
 const orderRouter = new express.Router();
 
 orderRouter
-    .get('/', authenticate, function(req, res) {
-        OrderModel.findAll({ where: { userId: req.user.id } }).then(data => {
-            res.json({
-                response: {
-                    success: true,
-                    data
+    .get('/', function(req, res) {
+        res.json({
+            response: {
+                success: true,
+                data: orderData
+            }
+        });
+    })
+    .get('/data', function(req, res) {
+        res.json({
+            response: {
+                success: true,
+                data: {
+                    type: orderType,
+                    provider: orderProvider
                 }
-            });
-        })
-            .catch(err => {
-                res.json({
-                    response: {
-                        success: false,
-                        errors: err
-                    }
-                });
-            });
+            }
+        });
     })
     .post('/type', function(req, res) {
         const type = req.body;
 
-        TypeModel.create(type).then(items => {
-            res.json({
-                response: {
-                    success: true,
-                    items
-                }
-            });
-        })
-            .catch(err => {
-                res.json({
-                    response: {
-                        success: false,
-                        errors: err
-                    }
-                });
-            });
+        type.id = orderType.length + 1;
+        orderType.push(type);
+        res.json({
+            response: {
+                success: true,
+                items: type
+            }
+        });
     })
     .post('/provider', function(req, res) {
         const provider = req.body;
 
-        ProviderModel.create(provider).then(items => {
-            res.json({
-                response: {
-                    success: true,
-                    items
-                }
-            });
-        })
-            .catch(err => {
-                res.json({
-                    response: {
-                        success: false,
-                        errors: err
-                    }
-                });
-            });
+        provider.id = orderProvider.length + 1;
+        orderProvider.push(provider);
+        res.json({
+            response: {
+                success: true,
+                items: provider
+            }
+        });
     })
-    .get('/data', function(req, res) {
-        ProviderModel.findAll().then(data => {
-            return TypeModel.findAll().then(items => {
-                res.json({
-                    response: {
-                        success: true,
-                        data: {
-                            type: items,
-                            provider: data
-                        }
-                    }
-                });
-            })
-                .catch(err => {
-                    res.json({
-                        response: {
-                            success: false,
-                            errors: err
-                        }
-                    });
-                });
-        })
-            .catch(err => {
-                res.json({
-                    response: {
-                        success: false,
-                        errors: err
-                    }
-                });
-            });
-    })
-    .post('/', authenticate, function(req, res) {
+    .post('/', function(req, res) {
         const order = req.body;
 
-        order.userId = req.user.id;
+        order.id = orderData.length + 1;
         order.orderDate = Date.now();
 
         if (parseInt(order.orderDatePerformance) <= order.orderDate) {
@@ -113,89 +101,56 @@ orderRouter
             order.orderStatus = 'Confirm';
         }
 
-        OrderModel.findAll().then(data => {
-            let countInMonth = 0;
+        let countInMonth = 0;
 
-            data.forEach(function(item) {
-                const bufDate = new Date(parseInt(item.orderDate));
+        orderData.forEach(function(item) {
+            const bufDate = new Date(parseInt(item.orderDate));
 
-                if (bufDate.getMonth() === new Date().getMonth()) {
-                    countInMonth++;
-                }
-            });
+            if (bufDate.getMonth() === new Date().getMonth()) {
+                countInMonth++;
+            }
+        });
 
-            const date = new Date();
+        const date = new Date();
 
-            const year = date.getFullYear().toString().substring(2, 4);
-            let month = date.getMonth() + 1;
+        const year = date.getFullYear().toString().substring(2, 4);
+        let month = date.getMonth() + 1;
 
-            month = (month.toString().length === 1) ? '0' + month : month;
-            let day = date.getDate();
+        month = (month.toString().length === 1) ? '0' + month : month;
+        let day = date.getDate();
 
-            day = (day.toString().length === 1) ? '0' + day : day;
+        day = (day.toString().length === 1) ? '0' + day : day;
 
-            const orderTypeFirst = order.orderType.toString().substring(0, 1).toLowerCase();
+        const orderTypeFirst = order.orderType.toString().substring(0, 1).toLowerCase();
 
-            order.orderNumber = String(
+        order.orderNumber = String(
                 orderTypeFirst + '-' + year +
                 month +
                 day + countInMonth);
 
-            return OrderModel.create(order).then(items => {
-                res.json({
-                    response: {
-                        success: true,
-                        items
-                    }
-                });
-            })
-                .catch(err => {
-                    res.json({
-                        response: {
-                            success: false,
-                            errors: err
-                        }
-                    });
-                });
-        })
-            .catch(err => {
-                res.json({
-                    response: {
-                        success: false,
-                        errors: err
-                    }
-                });
-            });
+        orderData.push(order);
+        res.json({
+            response: {
+                success: true,
+                items: order
+            }
+        });
     })
-    .put('/', authenticate, function(req, res) {
+    .put('/', function(req, res) {
         const order = req.body;
 
-        OrderModel.update(order, { where: { id: order.id }, returning: true })
-            .then(data => {
-                res.json({
-                    response: {
-                        success: Boolean(Number(data[0])),
-                        items: data[1].length === 0 ? 'No one row updated!' : data[1][0]
-                    }
-                });
-            })
-            .catch(err => {
-                res.json({
-                    response: {
-                        success: false,
-                        errors: err
-                    }
-                });
-            });
-    })
-    .delete('/:id', authenticate, function(req, res) {
-        OrderModel.destroy({ where: { id: req.params.id } })
-            .then(data => {
-                res.json({ response: { success: Boolean(Number(data)) } });
-            })
-            .catch(err => {
-                res.json({ response: err });
-            });
+        orderData = orderData.map(function(item) {
+            if (item.id === order.id) {
+                return item = order;
+            }
+            return item;
+        });
+        res.json({
+            response: {
+                success: true,
+                items: order
+            }
+        });
     })
 ;
 
